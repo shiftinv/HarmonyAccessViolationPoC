@@ -8,21 +8,18 @@ namespace HarmonyAccessViolationPoC
 {
     static class Program
     {
-        /// <summary>
-        /// The main entry point for the application.
-        /// </summary>
         [STAThread]
         static void Main()
         {
             var harmony = new Harmony("_");
             harmony.PatchAll();
 
-            var form = new Form1();
+            var form = new Container();
 
             var propEvents = typeof(Control).GetProperty("Events", BindingFlags.NonPublic | BindingFlags.Instance);
             var eventClick = typeof(Control).GetField("EventClick", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
 
-            var button = AccessTools.Field(typeof(Form1), "button1").GetValue(form);
+            var button = AccessTools.Field(typeof(Container), "button1").GetValue(form);
             var events = (EventHandlerList)propEvents.GetValue(button);
             var handler = events[eventClick];
 
@@ -33,8 +30,25 @@ namespace HarmonyAccessViolationPoC
         }
     }
 
+    class Container : Form  // crashes
+    // class Container        // works
+    {
+        private Button button1;
 
-    [HarmonyPatch(typeof(Form1), "Button1_Click")]
+        internal Container()
+        {
+            button1 = new Button();
+            button1.Click += Button1_Click;
+        }
+
+        private void Button1_Click(object sender, EventArgs e)
+        {
+            Console.WriteLine("Button1_Click");
+        }
+    }
+
+
+    [HarmonyPatch(typeof(Container), "Button1_Click")]
     class HandlerPatch
     {
         static void Prefix()
