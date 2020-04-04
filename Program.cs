@@ -24,13 +24,12 @@ namespace HarmonyAccessViolationPoC
     class TestClass : MarshalByRefObject    // crashes
     //class TestClass    // works
     {
-        public delegate void TestEvent();
-        public event TestEvent OnTestEvent;
+        delegate void TestDelegate();
 
         internal void Run()
         {
-            OnTestEvent += Handler;
-            var _ = OnTestEvent.Method;  // <=== "The runtime has encountered a fatal error. [...] 0xc0000005"
+            Delegate del = Delegate.CreateDelegate(typeof(TestDelegate), this, "Handler");
+            var _ = del.Method;  // <=== "The runtime has encountered a fatal error. [...] 0xc0000005"
         }
 
         // patched with an empty prefix
