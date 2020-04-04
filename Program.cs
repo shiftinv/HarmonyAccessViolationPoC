@@ -1,8 +1,5 @@
 ﻿using HarmonyLib;
 using System;
-using System.ComponentModel;
-using System.Reflection;
-using System.Windows.Forms;
 
 namespace HarmonyAccessViolationPoC
 {
@@ -14,45 +11,29 @@ namespace HarmonyAccessViolationPoC
             var harmony = new Harmony("_");
             harmony.PatchAll();
 
-            var form = new Container();
-
-            var propEvents = typeof(Control).GetProperty("Events", BindingFlags.NonPublic | BindingFlags.Instance);
-            var eventClick = typeof(Control).GetField("EventClick", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
-
-            var button = AccessTools.Field(typeof(Container), "button1").GetValue(form);
-            var events = (EventHandlerList)propEvents.GetValue(button);
-            var handler = events[eventClick];
-
-            var handlerMethod = handler.Method;  // <=== "The runtime has encountered a fatal error. [...] 0xc0000005"
-
-            // handlerMethod  should be equal to  Form1.Button1_Click
-            Console.WriteLine($"handlerMethod: {handlerMethod}");
+            new TestClass().Run();
         }
     }
 
-    class Container : MarshalByRefObject  // crashes
-    // class Container        // works
-    {
-        private Button button1;
-
-        internal Container()
-        {
-            button1 = new Button();
-            button1.Click += Button1_Click;
-        }
-
-        private void Button1_Click(object sender, EventArgs e)
-        {
-            Console.WriteLine("Button1_Click");
-        }
-    }
-
-
-    [HarmonyPatch(typeof(Container), "Button1_Click")]
+    [HarmonyPatch(typeof(TestClass), "Handler")]
     class HandlerPatch
     {
-        static void Prefix()
+        static void Prefix() { }
+    }
+
+    class TestClass : MarshalByRefObject    // crashes
+    //class TestClass    // works
+    {
+        public delegate void TestEvent();
+        public event TestEvent OnTestEvent;
+
+        internal void Run()
         {
+            OnTestEvent += Handler;
+            var _ = OnTestEvent.Method;  // <=== "The runtime has encountered a fatal error. [...] 0xc0000005"
         }
+
+        // patched with an empty prefix
+        private void Handler() { }
     }
 }
