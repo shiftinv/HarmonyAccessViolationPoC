@@ -30,7 +30,7 @@ namespace HarmonyAccessViolationPoC
         }
     }
 
-    class Container : Form  // crashes
+    class Container : MarshalByRefObject  // crashes
     // class Container        // works
     {
         private Button button1;
